@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "server",
+  "dolt_database": "k6_pgbench",
+  "project_id": "be1cc9e2-767c-4880-9f21-e46d12d35cd2"
+}
