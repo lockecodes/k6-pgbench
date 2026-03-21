@@ -62,7 +62,7 @@ k6-pgbench/
 │       │   ├── tpcc-default.yaml
 │       │   └── tpcc-readonly.yaml
 │       └── charts/
-│           ├── cnpg/             # CNPG operator + Cluster CR
+│           ├── cnpg/             # CNPG Cluster CR (operator deployed separately)
 │           ├── k6/               # k6 benchmark jobs
 │           └── monitoring/       # Optional kubernetes-monitoring
 │
@@ -75,13 +75,21 @@ k6-pgbench/
 
 Multi-stage Dockerfile:
 
-1. **Builder stage** (`grafana/xk6`): Runs `xk6 build` with extensions:
+1. **Builder stage** (`grafana/xk6:latest`): Runs `xk6 build` with extensions:
    - `github.com/grafana/xk6-sql`
    - `github.com/grafana/xk6-sql-driver-postgres`
+   - Pin specific versions in the Dockerfile for reproducible builds (e.g., `@v1.x.x`).
 
 2. **Runtime stage** (minimal base): Copies the built k6 binary and `scripts/` directory.
 
 The Tiltfile builds this image locally via `docker_build()`. No pre-built registry image — local builds only for now.
+
+**Makefile targets:**
+- `make build` — Build the custom k6 Docker image
+- `make test` — Run k6 script syntax validation
+- `make lint` — Lint JavaScript files
+- `make docker-build` — Alias for `make build`
+- `make help` — List available targets
 
 ## k6 Script Architecture
 
@@ -98,7 +106,7 @@ Accepts a `connections` config object:
 ```
 
 - **`separate` mode**: Opens distinct SQL connections to primary and readonly endpoints. Benchmark scripts call `db.primary()` for writes and `db.readonly()` for reads.
-- **`pooler` mode**: Single connection to the primary/pooler endpoint. Read transactions issue `SET default_transaction_read_only = on` before executing, then reset afterward.
+- **`pooler` mode**: Single connection to the primary/pooler endpoint. Read transactions issue `SET default_transaction_read_only = on` before executing, then reset afterward. **Note:** This mode requires PgBouncer in `session` pooling mode. In `transaction` pooling mode, session-level SET commands are not reliable across transactions because they may be applied to different backend connections. The Helm chart values and documentation will call this out.
 
 When `readonly` is not configured, all queries go to primary regardless of mode.
 
@@ -171,7 +179,7 @@ Creates the exact pgbench schema:
 CREATE TABLE pgbench_branches (bid INT NOT NULL, bbalance INT NOT NULL, filler CHAR(88) NOT NULL DEFAULT '');
 CREATE TABLE pgbench_tellers (tid INT NOT NULL, bid INT NOT NULL, tbalance INT NOT NULL, filler CHAR(84) NOT NULL DEFAULT '');
 CREATE TABLE pgbench_accounts (aid INT NOT NULL, bid INT NOT NULL, abalance INT NOT NULL, filler CHAR(84) NOT NULL DEFAULT '');
-CREATE TABLE pgbench_history (tid INT NOT NULL, bid INT NOT NULL, aid INT NOT NULL, delta INT NOT NULL, mtime TIMESTAMP NOT NULL);
+CREATE TABLE pgbench_history (tid INT NOT NULL, bid INT NOT NULL, aid INT NOT NULL, delta INT NOT NULL, mtime TIMESTAMP NOT NULL, filler CHAR(22));
 ```
 
 Primary keys on `bid`, `tid`, `aid`. Data population:
@@ -226,7 +234,13 @@ END;
 
 ### Read-Replica Variant (`pgbench/tpcb-readonly.js`)
 
-Same transaction as `tpcb.js`, but the SELECT is routed to the readonly connection while all writes go to primary. In `separate` mode, opens a second connection to the readonly service. In `pooler` mode, uses `SET default_transaction_read_only`.
+**This is an intentional deviation from standard TPC-B for replica load testing, not a faithful pgbench reproduction.** The standard TPC-B SELECT reads `abalance` that was just updated in the same transaction — routing it to a replica would return stale (pre-UPDATE) data.
+
+Instead, `tpcb-readonly.js` runs two parallel workloads:
+1. **Write workload** on primary: The full TPC-B transaction (BEGIN through END) exactly as `tpcb.js`
+2. **Read workload** on readonly: Independent `SELECT abalance FROM pgbench_accounts WHERE aid = :aid` queries at a configurable rate, similar to `select-only.js` but routed to replicas
+
+This generates mixed read/write load that exercises both primary and replicas, which is the actual goal for horizontal scaling tests. The read/write ratio is configurable via separate VU counts for each workload (k6 scenarios).
 
 ## TPC-C Implementation (Simplified)
 
@@ -247,7 +261,7 @@ Implements the core TPC-C workload with correct transaction types and mix ratios
 | `customer` | 30,000 | c_w_id, c_d_id, c_id |
 | `history` | 30,000 | (no PK) |
 | `order` | 30,000 | o_w_id, o_d_id, o_id |
-| `new_order` | 9,000 | no_w_id, no_d_id, no_o_id |
+| `new_order` | 9,000 (orders 2101-3000 per district × 10 districts) | no_w_id, no_d_id, no_o_id |
 | `order_line` | ~300,000 | ol_w_id, ol_d_id, ol_o_id, ol_number |
 | `item` | 100,000 (fixed) | i_id |
 | `stock` | 100,000 | s_w_id, s_i_id |
@@ -371,7 +385,7 @@ k6:
     connectionMode: separate
     metricsLevel: standard
   connection:
-    port: 5432
+    port: 5432            # Standard CNPG port (neon-cnpg uses 55433 — override in integration)
     user: app
     database: app
 
@@ -381,15 +395,16 @@ monitoring: {}
 ### Helm Charts
 
 **`charts/cnpg/`**:
-- `Chart.yaml` with dependency on `cloudnative-pg` operator chart
 - Templates: `Cluster` CR with configurable instances, replicas, storage, postgresql parameters
 - CNPG auto-creates `-rw` and `-ro` services + app user secret
+- **Does NOT include the CNPG operator** — the operator is deployed as a separate `helm_resource` in the Tiltfile (mirroring neon-cnpg's pattern of deploying the operator independently before applying CRs). This ensures CRDs are registered before any Cluster CR is applied.
 
 **`charts/k6/`**:
 - `k6-init` Job: initContainer waits for postgres, then runs `k6 run /scripts/pgbench/init.js` or `/scripts/tpcc/init.js`
 - `k6-benchmark` Job: runs the selected benchmark script with full env var configuration
-- ConfigMap mounting the `scripts/` directory from the Docker image
+- Scripts are baked into the Docker image at build time (no ConfigMap needed)
 - Environment variables for connection, scale, metrics, Prometheus remote write URL
+- Password sourced from the CNPG-generated Secret via `secretKeyRef` (same pattern as neon-cnpg pgbench-run.yaml)
 
 **`charts/monitoring/`**:
 - `Chart.yaml` declares dependency on `grafana/kubernetes-monitoring` Helm chart
