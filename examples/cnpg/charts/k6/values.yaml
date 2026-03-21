@@ -1,0 +1,43 @@
+cluster:
+  name: k6-bench
+
+image:
+  repository: k6-pgbench
+  tag: latest
+  pullPolicy: IfNotPresent
+
+benchmark:
+  type: tpcb
+  scale: 50
+  vus: 5
+  duration: "600s"
+  warmupDuration: "300s"
+  readOnly: false
+  connectionMode: separate
+  metricsLevel: standard
+  scenario: default
+
+  # TPC-C specific
+  warehouses: ""  # defaults to scale if empty
+
+  # Read/write VU split for tpcb-readonly
+  writeVus: ""
+  readVus: ""
+
+connection:
+  port: 5432
+  user: app
+  database: app
+
+# Prometheus remote write for metrics export
+# Set via .values.override.yaml when monitoring is enabled
+prometheus:
+  enabled: false
+  remoteWriteUrl: ""
+
+resources:
+  requests:
+    cpu: "250m"
+    memory: "512Mi"
+  limits:
+    memory: "1Gi"

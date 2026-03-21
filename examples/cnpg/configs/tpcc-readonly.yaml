@@ -1,0 +1,13 @@
+cnpg:
+  replicas: 2
+
+k6:
+  benchmark:
+    type: tpcc-readonly
+    scale: 10
+    warehouses: "10"
+    vus: 20
+    duration: "600s"
+    readOnly: true
+    connectionMode: separate
+    metricsLevel: standard

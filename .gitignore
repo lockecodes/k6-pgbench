@@ -32,6 +32,14 @@ go.work.sum
 # .vscode/
 /kubernetes-monitoring.yaml
 
+# Tilt overrides and temp files
+.values.override.yaml
+tmp/
+
+# Helm dependency charts
+examples/cnpg/charts/monitoring/charts/
+examples/cnpg/charts/monitoring/Chart.lock
+
 # Dolt database files (added by bd init)
 .dolt/
 *.db

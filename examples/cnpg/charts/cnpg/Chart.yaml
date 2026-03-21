@@ -1,0 +1,5 @@
+apiVersion: v2
+name: cnpg-cluster
+description: CloudNativePG Cluster for k6-pgbench benchmarks
+version: 0.1.0
+type: application

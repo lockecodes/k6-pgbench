@@ -1,0 +1,86 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "k6.clusterName" . }}-k6-benchmark
+  labels:
+    {{- include "k6.labels" . | nindent 4 }}
+    k6-pgbench/phase: benchmark
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        {{- include "k6.labels" . | nindent 8 }}
+        k6-pgbench/phase: benchmark
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: k6-benchmark
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ['k6', 'run']
+          args:
+            {{- if and .Values.prometheus.enabled .Values.prometheus.remoteWriteUrl }}
+            - '--out'
+            - 'experimental-prometheus-rw'
+            {{- end }}
+            - '{{ include "k6.benchmarkScript" . }}'
+          env:
+            # Primary connection
+            - name: K6_PG_HOST
+              value: {{ include "k6.primaryHost" . | quote }}
+            - name: K6_PG_PORT
+              value: {{ .Values.connection.port | quote }}
+            - name: K6_PG_USER
+              value: {{ .Values.connection.user | quote }}
+            - name: K6_PG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "k6.secretName" . }}
+                  key: password
+            - name: K6_PG_DATABASE
+              value: {{ .Values.connection.database | quote }}
+
+            # Readonly connection (CNPG -ro service)
+            {{- if .Values.benchmark.readOnly }}
+            - name: K6_PG_READONLY_HOST
+              value: {{ include "k6.readonlyHost" . | quote }}
+            - name: K6_PG_READONLY_PORT
+              value: {{ .Values.connection.port | quote }}
+            {{- end }}
+
+            # Benchmark configuration
+            - name: K6_PG_CONNECTION_MODE
+              value: {{ .Values.benchmark.connectionMode | quote }}
+            - name: K6_PGBENCH_SCALE
+              value: {{ .Values.benchmark.scale | quote }}
+            - name: K6_VUS
+              value: {{ .Values.benchmark.vus | quote }}
+            - name: K6_DURATION
+              value: {{ .Values.benchmark.duration | quote }}
+            - name: K6_METRICS_LEVEL
+              value: {{ .Values.benchmark.metricsLevel | quote }}
+            - name: K6_BENCHMARK_SCENARIO
+              value: {{ .Values.benchmark.scenario | quote }}
+            {{- if .Values.benchmark.warehouses }}
+            - name: K6_TPCC_WAREHOUSES
+              value: {{ .Values.benchmark.warehouses | quote }}
+            {{- end }}
+            {{- if .Values.benchmark.writeVus }}
+            - name: K6_WRITE_VUS
+              value: {{ .Values.benchmark.writeVus | quote }}
+            {{- end }}
+            {{- if .Values.benchmark.readVus }}
+            - name: K6_READ_VUS
+              value: {{ .Values.benchmark.readVus | quote }}
+            {{- end }}
+
+            # Prometheus remote write
+            {{- if and .Values.prometheus.enabled .Values.prometheus.remoteWriteUrl }}
+            - name: K6_PROMETHEUS_RW_SERVER_URL
+              value: {{ .Values.prometheus.remoteWriteUrl | quote }}
+            - name: K6_PROMETHEUS_RW_TREND_AS_NATIVE_HISTOGRAM
+              value: "true"
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

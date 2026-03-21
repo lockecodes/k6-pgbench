@@ -1,0 +1,31 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ include "cnpg.clusterName" . }}
+  labels:
+    {{- include "cnpg.labels" . | nindent 4 }}
+spec:
+  instances: {{ add .Values.cluster.instances .Values.cluster.replicas }}
+  imageName: {{ .Values.cluster.imageName }}
+
+  bootstrap:
+    initdb:
+      database: {{ .Values.cluster.bootstrap.initdb.database }}
+      owner: {{ .Values.cluster.bootstrap.initdb.owner }}
+
+  storage:
+    size: {{ .Values.cluster.storage.size }}
+
+  postgresql:
+    parameters:
+      {{- range $key, $value := .Values.cluster.postgresql.parameters }}
+      {{ $key }}: {{ $value | quote }}
+      {{- end }}
+
+  resources:
+    {{- toYaml .Values.cluster.resources | nindent 4 }}
+
+  {{- if gt (int .Values.cluster.replicas) 0 }}
+  replicaCluster:
+    enabled: false
+  {{- end }}

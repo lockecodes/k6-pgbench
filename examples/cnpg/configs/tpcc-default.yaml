@@ -1,0 +1,8 @@
+k6:
+  benchmark:
+    type: tpcc
+    scale: 10
+    warehouses: "10"
+    vus: 20
+    duration: "600s"
+    metricsLevel: standard

@@ -1,0 +1,181 @@
+# k6-pgbench CNPG Example — Tiltfile
+#
+# Deploys a CNPG cluster and runs k6 benchmarks against it.
+# Follows neon-cnpg/load-test conventions for config merging and resource dependencies.
+#
+# Usage:
+#   tilt up
+#   tilt up -- --values custom.yaml
+
+load('ext://helm_resource', 'helm_resource', 'helm_repo')
+
+# --- Configuration helpers (identical to neon-cnpg/load-test) ---
+
+def deep_merge(base, override):
+    """Recursively merge override into base. Override values win."""
+    result = dict(base)
+    for key in override:
+        if key in result and type(result[key]) == 'dict' and type(override[key]) == 'dict':
+            result[key] = deep_merge(result[key], override[key])
+        else:
+            result[key] = override[key]
+    return result
+
+def write_values_file(name, values):
+    """Write a dict as a YAML values file under tmp/ and return the path."""
+    path = 'tmp/values-%s.yaml' % name
+    local('mkdir -p tmp && cat > %s << EOFVALUES\n%s\nEOFVALUES' % (path, encode_yaml(values)))
+    return path
+
+def read_yaml_config(path):
+    """Read a YAML file, returning empty dict if it doesn't exist."""
+    result = read_yaml(path, default={})
+    return result if result else {}
+
+# --- Load and merge configuration ---
+
+defaults = read_yaml_config('./values.yaml')
+overrides = read_yaml_config('./.values.override.yaml')
+all_config = deep_merge(defaults, overrides)
+
+# CLI --values support
+config.define_string_list('values', args=True)
+cfg = config.parse()
+for extra_file in cfg.get('values', []):
+    extra = read_yaml_config(extra_file)
+    all_config = deep_merge(all_config, extra)
+
+# Extract per-section configs
+tilt_config = all_config.get('tilt', {})
+cnpg_config = all_config.get('cnpg', {})
+k6_config = all_config.get('k6', {})
+monitoring_config = all_config.get('monitoring', {})
+
+# Load scenario overlay
+scenario = tilt_config.get('scenario', 'tpcb-default')
+scenario_file = './configs/%s.yaml' % scenario
+scenario_overlay = read_yaml_config(scenario_file)
+if scenario_overlay:
+    all_config = deep_merge(all_config, scenario_overlay)
+    cnpg_config = all_config.get('cnpg', {})
+    k6_config = all_config.get('k6', {})
+
+monitoring_enabled = tilt_config.get('monitoring', {}).get('enabled', False)
+
+# Watch config files for live reload
+watch_file('./values.yaml')
+watch_file('./.values.override.yaml')
+watch_file(scenario_file)
+
+# --- Write per-chart values files ---
+
+NAMESPACE = 'k6-pgbench'
+CNPG_CHART_DIR = './charts/cnpg'
+K6_CHART_DIR = './charts/k6'
+MONITORING_CHART_DIR = './charts/monitoring'
+
+cnpg_values = {
+    'cluster': {
+        'name': cnpg_config.get('name', 'k6-bench'),
+        'instances': cnpg_config.get('instances', 1) + cnpg_config.get('replicas', 0),
+        'replicas': cnpg_config.get('replicas', 0),
+        'storage': cnpg_config.get('storage', {'size': '2Gi'}),
+        'postgresql': cnpg_config.get('postgresql', {}),
+    },
+}
+cnpg_values_file = write_values_file('cnpg', cnpg_values)
+
+benchmark_config = k6_config.get('benchmark', {})
+k6_values = {
+    'cluster': {'name': cnpg_config.get('name', 'k6-bench')},
+    'benchmark': benchmark_config,
+    'connection': k6_config.get('connection', {}),
+}
+k6_values_file = write_values_file('k6', k6_values)
+
+# --- Phase 1: Namespace ---
+
+local_resource(
+    'create-namespace',
+    cmd='kubectl create namespace %s --dry-run=client -o yaml | kubectl apply -f -' % NAMESPACE,
+)
+
+# --- Phase 2: CNPG Operator ---
+
+helm_repo('cnpg', 'https://cloudnative-pg.github.io/charts')
+
+helm_resource(
+    'cnpg-operator',
+    'cnpg/cloudnative-pg',
+    namespace='cnpg-system',
+    flags=['--create-namespace', '--wait'],
+    resource_deps=['create-namespace'],
+)
+
+# --- Phase 3: CNPG Cluster ---
+
+k8s_yaml(helm(CNPG_CHART_DIR, name='k6-bench', namespace=NAMESPACE, values=[cnpg_values_file]))
+
+k8s_resource(
+    'k6-bench',
+    resource_deps=['cnpg-operator'],
+    pod_readiness='ignore',
+)
+
+# --- Phase 4: Wait for cluster readiness ---
+
+cluster_name = cnpg_config.get('name', 'k6-bench')
+replicas = cnpg_config.get('replicas', 0)
+
+wait_cmd = 'echo "Waiting for CNPG cluster %s..." && ' % cluster_name
+wait_cmd += 'kubectl wait --for=condition=Ready cluster/%s -n %s --timeout=300s' % (cluster_name, NAMESPACE)
+
+if replicas > 0:
+    total_pods = cnpg_config.get('instances', 1) + replicas
+    wait_cmd += ' && echo "Waiting for %d pods..." && ' % total_pods
+    wait_cmd += 'kubectl -n %s wait pod -l cnpg.io/cluster=%s --for=condition=Ready --timeout=300s' % (NAMESPACE, cluster_name)
+
+local_resource(
+    'wait-for-cluster',
+    cmd=wait_cmd,
+    resource_deps=['k6-bench'],
+)
+
+# --- Phase 5: Build k6-pgbench Docker image ---
+
+docker_build(
+    'k6-pgbench',
+    context='../../',
+    dockerfile='../../Dockerfile',
+)
+
+# --- Phase 6: k6 Init Job ---
+
+k8s_yaml(helm(K6_CHART_DIR, name='k6-bench', namespace=NAMESPACE, values=[k6_values_file]))
+
+k8s_resource(
+    'k6-bench-k6-init',
+    resource_deps=['wait-for-cluster'],
+)
+
+# --- Phase 7: k6 Benchmark Job ---
+
+k8s_resource(
+    'k6-bench-k6-benchmark',
+    resource_deps=['k6-bench-k6-init'],
+)
+
+# --- Phase 8: Optional Monitoring ---
+
+if monitoring_enabled:
+    helm_repo('grafana', 'https://grafana.github.io/helm-charts')
+
+    monitoring_values_file = write_values_file('monitoring', monitoring_config)
+
+    helm_resource(
+        'k6-monitoring',
+        'grafana/k8s-monitoring',
+        namespace='monitoring',
+        flags=['--create-namespace', '--wait', '--values', monitoring_values_file],
+        resource_deps=['create-namespace'],
+    )

@@ -1,0 +1,7 @@
+k6:
+  benchmark:
+    type: tpcb
+    scale: 50
+    vus: 16
+    duration: "600s"
+    metricsLevel: standard

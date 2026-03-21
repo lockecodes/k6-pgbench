@@ -1,0 +1,31 @@
+tilt:
+  scenario: tpcb-default
+  monitoring:
+    enabled: false
+
+cnpg:
+  instances: 1
+  replicas: 0
+  storage:
+    size: 2Gi
+  postgresql:
+    parameters:
+      shared_buffers: "256MB"
+
+k6:
+  image: k6-pgbench
+  benchmark:
+    type: tpcb
+    scale: 50
+    vus: 5
+    duration: "600s"
+    warmupDuration: "300s"
+    readOnly: false
+    connectionMode: separate
+    metricsLevel: standard
+  connection:
+    port: 5432
+    user: app
+    database: app
+
+monitoring: {}

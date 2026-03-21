@@ -1,0 +1,29 @@
+cluster:
+  name: k6-bench
+  instances: 1
+  replicas: 0
+  imageName: ghcr.io/cloudnative-pg/postgresql:17.2
+
+  storage:
+    size: 2Gi
+
+  postgresql:
+    parameters:
+      shared_buffers: "256MB"
+      effective_cache_size: "512MB"
+      work_mem: "4MB"
+      maintenance_work_mem: "64MB"
+      max_connections: "200"
+      wal_buffers: "8MB"
+
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      memory: "1Gi"
+
+  bootstrap:
+    initdb:
+      database: app
+      owner: app

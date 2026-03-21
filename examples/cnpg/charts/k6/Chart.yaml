@@ -1,0 +1,5 @@
+apiVersion: v2
+name: k6-benchmark
+description: k6 benchmark init and run Jobs for k6-pgbench
+version: 0.1.0
+type: application

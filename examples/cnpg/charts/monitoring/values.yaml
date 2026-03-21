@@ -1,0 +1,52 @@
+# Default values for the kubernetes-monitoring chart wrapper.
+# Override in .values.override.yaml under the 'monitoring:' section.
+#
+# Reference: copy relevant sections from your kubernetes-monitoring.yaml
+# configuration file into .values.override.yaml -> monitoring -> k8sMonitoring.
+#
+# Required overrides for Grafana Cloud:
+#   monitoring:
+#     k8sMonitoring:
+#       cluster:
+#         name: your-cluster-name
+#       destinations:
+#         - name: grafana-cloud-metrics
+#           type: prometheus
+#           url: https://prometheus-prod-XX-prod-XX.grafana.net/api/prom/push
+#           auth:
+#             type: basic
+#             username: "XXXXXX"
+#             password: "glc_XXXXX..."
+#         - name: grafana-cloud-logs
+#           type: loki
+#           url: https://logs-prod-XXX.grafana.net/loki/api/v1/push
+#           auth:
+#             type: basic
+#             username: "XXXXXX"
+#             password: "glc_XXXXX..."
+
+k8sMonitoring:
+  cluster:
+    name: k6-pgbench
+
+  clusterMetrics:
+    enabled: true
+    opencost:
+      enabled: false
+    kepler:
+      enabled: false
+
+  clusterEvents:
+    enabled: true
+
+  podLogs:
+    enabled: true
+
+  alloy-metrics:
+    enabled: true
+
+  alloy-singleton:
+    enabled: true
+
+  alloy-logs:
+    enabled: true
