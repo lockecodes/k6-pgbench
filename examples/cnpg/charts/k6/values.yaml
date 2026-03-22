@@ -28,6 +28,16 @@ benchmark:
   writeVus: ""
   readVus: ""
 
+  # Scale test parameters (tpcb-scale-test)
+  scaleTest:
+    readVusStart: ""    # Starting read VUs (default: 5)
+    readVusPeak: ""     # Peak read VUs during ramp (default: 50)
+    warmup: ""          # Warmup duration at start VUs (default: 2m)
+    rampUp: ""          # Ramp-up duration to peak (default: 5m)
+    peak: ""            # Sustained peak duration (default: 10m)
+    rampDown: ""        # Ramp-down duration back to start (default: 5m)
+    coolDown: ""        # Cool-down duration at start VUs (default: 2m)
+
 connection:
   port: 5432
   user: app

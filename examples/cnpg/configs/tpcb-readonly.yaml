@@ -1,0 +1,14 @@
+# TPC-B readonly — 2 replicas, constant read/write split, 10m duration
+cnpg:
+  replicas: 2
+
+k6:
+  benchmark:
+    type: tpcb-readonly
+    scale: 50
+    readOnly: true
+    connectionMode: separate
+    metricsLevel: standard
+    writeVus: 5
+    readVus: 10
+    duration: "600s"

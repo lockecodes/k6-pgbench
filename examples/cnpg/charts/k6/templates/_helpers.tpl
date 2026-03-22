@@ -42,6 +42,8 @@ app.kubernetes.io/managed-by: Helm
 /scripts/pgbench/simple-update.js
 {{- else if eq $type "tpcb-readonly" -}}
 /scripts/pgbench/tpcb-readonly.js
+{{- else if eq $type "tpcb-scale-test" -}}
+/scripts/pgbench/tpcb-scale-test.js
 {{- else if eq $type "tpcc" -}}
 /scripts/tpcc/tpcc.js
 {{- else if eq $type "tpcc-readonly" -}}

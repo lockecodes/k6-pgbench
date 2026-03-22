@@ -1,0 +1,38 @@
+# Scale test with read replicas — reads routed to -ro service.
+#
+# Run this AFTER scale-test-baseline with the same parameters.
+# Compare the two runs in Grafana to see:
+#   - Read latency stays flat as replicas absorb the ramp
+#   - Write latency on primary is unaffected by read load
+#   - TPS scales linearly as replicas are added by HPA/autoscaler
+#
+# The ramping read VU pattern is designed to trigger horizontal pod autoscaling:
+#   - Warmup establishes baseline at low load
+#   - Ramp-up increases read VUs linearly, creating CPU/connection pressure
+#   - Peak sustains high load long enough for autoscaler to react and stabilize
+#   - Ramp-down and cool-down measure scale-in behavior
+#
+# Adjust replicas, readVusPeak, and peak duration based on your autoscaler
+# configuration (HPA targetCPUUtilization, scale-up/down cooldowns, etc.).
+
+cnpg:
+  instances: 1
+  replicas: 2             # initial replica count (HPA can scale beyond this)
+
+k6:
+  benchmark:
+    type: tpcb-scale-test
+    scale: 50
+    readOnly: true          # enables K6_PG_READONLY_HOST → cluster -ro service
+    connectionMode: separate
+    metricsLevel: comprehensive   # includes replication lag monitoring
+    writeVus: 5
+    scaleTest:
+      readVusStart: 5
+      readVusPeak: 50
+      warmup: "2m"
+      rampUp: "5m"
+      peak: "10m"
+      rampDown: "5m"
+      coolDown: "2m"
+    duration: "24m"

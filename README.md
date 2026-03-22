@@ -28,7 +28,8 @@ k6-pgbench/
 │   │   ├── tpcb.js             # Standard TPC-B (pgbench default)
 │   │   ├── select-only.js      # pgbench -S equivalent
 │   │   ├── simple-update.js    # pgbench -N equivalent
-│   │   └── tpcb-readonly.js    # Write/read split for replica testing
+│   │   ├── tpcb-readonly.js    # Write/read split for replica testing
+│   │   └── tpcb-scale-test.js # Ramping read load for horizontal scaling tests
 │   └── tpcc/
 │       ├── init.js             # TPC-C 9-table schema + per-warehouse data
 │       ├── tpcc.js             # Full TPC-C mix (45/43/4/4/4)
@@ -52,6 +53,7 @@ k6-pgbench/
 | `tpcb-select-only` | `pgbench/select-only.js` | Read-only workload (`pgbench -S`) — SELECT abalance only |
 | `tpcb-simple-update` | `pgbench/simple-update.js` | Simplified writes (`pgbench -N`) — skips tellers/branches updates |
 | `tpcb-readonly` | `pgbench/tpcb-readonly.js` | Parallel write + read VU groups targeting primary and replicas |
+| `tpcb-scale-test` | `pgbench/tpcb-scale-test.js` | Ramping read VUs for horizontal scaling tests (see [Horizontal Scaling Test](#horizontal-scaling-test)) |
 | `tpcc` | `tpcc/tpcc.js` | Full TPC-C mix: New-Order 45%, Payment 43%, Order-Status 4%, Delivery 4%, Stock-Level 4% |
 | `tpcc-readonly` | `tpcc/tpcc-readonly.js` | TPC-C with Order-Status and Stock-Level routed to read replicas |
 
@@ -303,6 +305,29 @@ k6:
     metricsLevel: standard
 ```
 
+#### tpcb-readonly.yaml
+
+```yaml
+# TPC-B readonly — 2 replicas, constant read/write split, 10m duration
+cnpg:
+  replicas: 2
+
+k6:
+  benchmark:
+    type: tpcb-readonly
+    scale: 50
+    readOnly: true
+    connectionMode: separate
+    metricsLevel: standard
+    writeVus: 5
+    readVus: 10
+    duration: "600s"
+```
+
+#### scale-test-baseline.yaml / scale-test-replicas.yaml
+
+See [Horizontal Scaling Test](#horizontal-scaling-test) below for detailed usage.
+
 #### Creating Custom Scenarios
 
 Create a new file in `configs/`:
@@ -342,10 +367,35 @@ tilt:
 
 ### Read Replica Testing
 
-To benchmark read replicas, use a `readonly` benchmark type with replicas configured:
+Three benchmark types support routing read queries to replicas:
+
+| Type | How reads are routed |
+|------|---------------------|
+| `tpcb-readonly` | Two parallel k6 scenarios: constant write VUs on primary, constant read VUs on readonly |
+| `tpcc-readonly` | Single scenario, per-transaction routing: Order-Status (4%) and Stock-Level (4%) go to readonly, all others to primary |
+| `tpcb-scale-test` | Two parallel scenarios: constant write VUs on primary, **ramping** read VUs on readonly (for horizontal scaling tests) |
+
+#### Connection Modes
+
+- **`separate`** (default) — distinct TCP connections to the `-rw` and `-ro` services. CNPG's `-ro` service load-balances across all replicas.
+- **`pooler`** — single connection through PgBouncer, with `SET default_transaction_read_only = on` for read routing. Requires PgBouncer in session pooling mode.
+
+#### How routing works
+
+The `db.js` connection manager maintains separate connection handles:
+
+```
+openPrimary()  → K6_PG_HOST (cluster-rw service)
+openReadonly() → K6_PG_READONLY_HOST (cluster-ro service)
+                 Falls back to primary if K6_PG_READONLY_HOST is not set
+```
+
+Setting `readOnly: true` in the benchmark config causes the Helm template to populate `K6_PG_READONLY_HOST` from the CNPG `-ro` service name. When `readOnly: false`, the env var is omitted and all reads fall back to the primary — this is how the baseline comparison works.
+
+#### Basic readonly setup
 
 ```yaml
-# .values.override.yaml or a custom scenario config
+# configs/tpcb-readonly.yaml
 cnpg:
   replicas: 2
 
@@ -354,9 +404,174 @@ k6:
     type: tpcb-readonly    # or tpcc-readonly
     readOnly: true
     connectionMode: separate
+    writeVus: 5
+    readVus: 10
 ```
 
-In `separate` mode, CNPG's `-rw` and `-ro` services route connections to the appropriate instances. In `pooler` mode, a single connection is used with `SET` commands to switch between read and write targets (useful with PgBouncer-style poolers).
+Run with:
+
+```bash
+make benchmark SCENARIO=tpcb-readonly
+```
+
+#### Metrics by target
+
+All readonly benchmark types tag metrics with `target: primary` or `target: readonly`. In Grafana, use the `target` label to split latency and TPS:
+
+```promql
+# Read TPS on replicas
+rate(k6_iterations_total{target="readonly"}[$__rate_interval])
+
+# Write latency on primary (p95)
+histogram_quantile(0.95, sum(rate(k6_pgbench_latency_seconds{target="primary"}[$__rate_interval])))
+```
+
+### Horizontal Scaling Test
+
+The `tpcb-scale-test` benchmark is designed to force horizontal scaling of read replicas in a reproducible way, enabling direct comparison between primary-only and replica-backed configurations.
+
+#### How it works
+
+The test runs two parallel k6 scenarios:
+
+| Scenario | Executor | Target | Purpose |
+|----------|----------|--------|---------|
+| `write_workload` | `constant-vus` | primary | Steady write baseline (unchanged throughout) |
+| `read_workload` | `ramping-vus` | readonly | Increasing read pressure to trigger autoscaling |
+
+The read workload progresses through five phases:
+
+```
+Read VUs
+  ^
+  │                    ┌──────────────┐
+  │                   /│   3. Peak    │\
+  │                  / │  (10 min)    │ \
+  │                 /  │              │  \
+  │   ┌──────────┐/   │              │   \┌──────────┐
+  │   │1. Warmup │    │              │    │5. Cool   │
+  │   │  (2 min) │    │              │    │  (2 min) │
+  ──┴──┴─────────┴────┴──────────────┴────┴──────────┴──→ Time
+       2. Ramp Up        4. Ramp Down
+        (5 min)           (5 min)
+```
+
+1. **Warmup** (2m) — hold at `readVusStart` VUs to establish baseline metrics
+2. **Ramp-up** (5m) — linearly increase read VUs to `readVusPeak`, creating CPU/connection pressure that triggers HPA
+3. **Peak** (10m) — sustained high load, long enough for autoscaler to react, add replicas, and stabilize
+4. **Ramp-down** (5m) — linearly decrease read VUs, testing scale-in behavior
+5. **Cool-down** (2m) — hold at start VUs to measure return to baseline
+
+Write VUs remain constant throughout all phases, providing a stable control metric.
+
+#### Running a comparison
+
+The comparison requires two test runs with identical parameters — only the presence of replicas differs.
+
+**Step 1: Run the baseline (primary only)**
+
+```bash
+make benchmark SCENARIO=scale-test-baseline
+```
+
+This uses `scale-test-baseline.yaml`:
+
+```yaml
+cnpg:
+  instances: 1
+  replicas: 0          # no replicas
+
+k6:
+  benchmark:
+    type: tpcb-scale-test
+    readOnly: false     # reads fall back to primary
+    writeVus: 5
+    scaleTest:
+      readVusStart: 5
+      readVusPeak: 50
+      warmup: "2m"
+      rampUp: "5m"
+      peak: "10m"
+      rampDown: "5m"
+      coolDown: "2m"
+    duration: "24m"
+```
+
+All 50 read VUs at peak compete with the 5 write VUs on the same primary instance. Record the `testid` from the k6 output.
+
+**Step 2: Run the replica variant**
+
+```bash
+make benchmark SCENARIO=scale-test-replicas
+```
+
+This uses `scale-test-replicas.yaml`:
+
+```yaml
+cnpg:
+  instances: 1
+  replicas: 2            # read replicas provisioned
+
+k6:
+  benchmark:
+    type: tpcb-scale-test
+    readOnly: true        # reads go to -ro service
+    metricsLevel: comprehensive   # includes replication lag
+    writeVus: 5
+    scaleTest:
+      readVusStart: 5
+      readVusPeak: 50
+      warmup: "2m"
+      rampUp: "5m"
+      peak: "10m"
+      rampDown: "5m"
+      coolDown: "2m"
+    duration: "24m"
+```
+
+Read VUs are now load-balanced across replicas via the `-ro` service, leaving the primary free for writes.
+
+**Step 3: Compare in Grafana**
+
+Use the `testid` template variable to overlay both runs. Key things to look for:
+
+| Metric | Baseline (primary-only) | With replicas |
+|--------|------------------------|---------------|
+| Read p95 latency | Degrades during ramp-up as primary saturates | Stays flat — replicas absorb read load |
+| Write p95 latency | Degrades — reads compete for resources | Stable — primary handles only writes |
+| Read TPS | Hits ceiling at primary capacity | Scales with replica count |
+| Replication lag | N/A | Shows replica health under load (comprehensive tier) |
+
+#### Tuning for your autoscaler
+
+The default parameters (5 → 50 VUs over 5 minutes) are starting points. Adjust based on your HPA/autoscaler configuration:
+
+| Parameter | Config Key | Default | Tuning guidance |
+|-----------|-----------|---------|----------------|
+| Starting read VUs | `scaleTest.readVusStart` | `5` | Should be comfortably below a single replica's capacity |
+| Peak read VUs | `scaleTest.readVusPeak` | `50` | Must exceed single-replica capacity to trigger scaling |
+| Ramp-up duration | `scaleTest.rampUp` | `5m` | Must be long enough for your HPA to detect the load increase |
+| Peak duration | `scaleTest.peak` | `10m` | Must exceed HPA scale-up cooldown + pod startup time |
+| Ramp-down duration | `scaleTest.rampDown` | `5m` | Should be long enough to observe scale-in decisions |
+| Write VUs | `benchmark.writeVus` | `5` | Keep constant between baseline and replica runs |
+
+For CNPG with HPA, ensure the `peak` duration exceeds your `scaleUpStabilizationWindowSeconds` plus the time for a new replica pod to become `Ready` and join the `-ro` service endpoint.
+
+#### Scale test environment variables
+
+These env vars are set by the Helm chart from `scaleTest` config values, or can be set directly when running k6 outside of Helm:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `K6_WRITE_VUS` | `5` | Constant write VU count |
+| `K6_READ_VUS_START` | `5` | Read VUs at start of test |
+| `K6_READ_VUS_PEAK` | `50` | Read VUs at peak |
+| `K6_SCALE_WARMUP` | `2m` | Warmup phase duration |
+| `K6_SCALE_RAMP_UP` | `5m` | Ramp-up phase duration |
+| `K6_SCALE_PEAK` | `10m` | Peak phase duration |
+| `K6_SCALE_RAMP_DOWN` | `5m` | Ramp-down phase duration |
+| `K6_SCALE_COOL_DOWN` | `2m` | Cool-down phase duration |
+| `K6_DURATION` | `24m` | Total write workload duration (should match sum of phases) |
 
 ### Monitoring & Grafana
 

@@ -83,6 +83,38 @@ spec:
               value: {{ .Values.benchmark.readVus | quote }}
             {{- end }}
 
+            # Scale test parameters (tpcb-scale-test)
+            {{- with .Values.benchmark.scaleTest }}
+            {{- if .readVusStart }}
+            - name: K6_READ_VUS_START
+              value: {{ .readVusStart | quote }}
+            {{- end }}
+            {{- if .readVusPeak }}
+            - name: K6_READ_VUS_PEAK
+              value: {{ .readVusPeak | quote }}
+            {{- end }}
+            {{- if .warmup }}
+            - name: K6_SCALE_WARMUP
+              value: {{ .warmup | quote }}
+            {{- end }}
+            {{- if .rampUp }}
+            - name: K6_SCALE_RAMP_UP
+              value: {{ .rampUp | quote }}
+            {{- end }}
+            {{- if .peak }}
+            - name: K6_SCALE_PEAK
+              value: {{ .peak | quote }}
+            {{- end }}
+            {{- if .rampDown }}
+            - name: K6_SCALE_RAMP_DOWN
+              value: {{ .rampDown | quote }}
+            {{- end }}
+            {{- if .coolDown }}
+            - name: K6_SCALE_COOL_DOWN
+              value: {{ .coolDown | quote }}
+            {{- end }}
+            {{- end }}
+
             # Prometheus remote write
             {{- if and .Values.prometheus.enabled .Values.prometheus.remoteWriteUrl }}
             - name: K6_PROMETHEUS_RW_SERVER_URL

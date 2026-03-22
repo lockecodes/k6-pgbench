@@ -1,0 +1,31 @@
+# Scale test baseline — primary only, no read replicas.
+#
+# Run this FIRST, then run scale-test-replicas with the same parameters.
+# Compare the two runs in Grafana using the testid filter to see:
+#   - Read latency degradation under ramp (primary saturates)
+#   - TPS ceiling when reads and writes compete for the same instance
+#
+# The readonly host falls back to primary when no replicas are configured,
+# so all read VUs hit the primary alongside write VUs.
+
+cnpg:
+  instances: 1
+  replicas: 0
+
+k6:
+  benchmark:
+    type: tpcb-scale-test
+    scale: 50
+    readOnly: false       # no readonly host — reads fall back to primary
+    connectionMode: separate
+    metricsLevel: standard
+    writeVus: 5
+    scaleTest:
+      readVusStart: 5
+      readVusPeak: 50
+      warmup: "2m"
+      rampUp: "5m"
+      peak: "10m"
+      rampDown: "5m"
+      coolDown: "2m"
+    duration: "24m"
