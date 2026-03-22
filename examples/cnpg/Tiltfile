@@ -178,7 +178,7 @@ if monitoring_enabled:
     monitoring_values_file = write_values_file('monitoring', monitoring_config.get('k8sMonitoring', monitoring_config))
 
     helm_resource(
-        'k6-monitoring',
+        'grafana-k8s-monitoring',
         'grafana/k8s-monitoring',
         namespace='monitoring',
         flags=['--create-namespace', '--wait', '--values', monitoring_values_file],
