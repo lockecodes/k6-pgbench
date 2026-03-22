@@ -43,3 +43,4 @@ examples/cnpg/charts/monitoring/Chart.lock
 # Dolt database files (added by bd init)
 .dolt/
 *.db
+.beads/
