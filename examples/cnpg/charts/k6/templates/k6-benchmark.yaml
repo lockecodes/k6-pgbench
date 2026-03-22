@@ -26,6 +26,14 @@ spec:
             {{- end }}
             - '{{ include "k6.benchmarkScript" . }}'
           env:
+            # Kubernetes context labels
+            - name: K6_CLUSTER_NAME
+              value: {{ .Values.cluster.name | quote }}
+            - name: K6_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+
             # Primary connection
             - name: K6_PG_HOST
               value: {{ include "k6.primaryHost" . | quote }}

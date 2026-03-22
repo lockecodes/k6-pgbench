@@ -38,6 +38,10 @@ export function getConfig() {
 
     // pg_stat sampler interval (comprehensive tier)
     pgstatInterval: parseInt(__ENV.K6_PGSTAT_INTERVAL || '10', 10),
+
+    // Kubernetes context labels (for Prometheus filtering)
+    cluster: __ENV.K6_CLUSTER_NAME || '',
+    namespace: __ENV.K6_NAMESPACE || '',
   };
 }
 

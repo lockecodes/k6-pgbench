@@ -86,6 +86,8 @@ export const options = {
     scenario: config.scenario,
     target: 'primary',
     connection_mode: config.connection.mode,
+    cluster: config.cluster,
+    namespace: config.namespace,
   },
 };
 

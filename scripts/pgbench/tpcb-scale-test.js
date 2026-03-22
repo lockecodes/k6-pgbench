@@ -68,6 +68,8 @@ export const options = {
     benchmark: 'tpcb-scale-test',
     scenario: config.scenario,
     connection_mode: config.connection.mode,
+    cluster: config.cluster,
+    namespace: config.namespace,
   },
 };
 

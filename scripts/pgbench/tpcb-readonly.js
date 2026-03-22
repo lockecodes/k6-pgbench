@@ -42,6 +42,8 @@ export const options = {
     benchmark: 'tpcb-readonly',
     scenario: config.scenario,
     connection_mode: config.connection.mode,
+    cluster: config.cluster,
+    namespace: config.namespace,
   },
 };
 
