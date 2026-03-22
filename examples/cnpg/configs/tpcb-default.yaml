@@ -1,3 +1,4 @@
+# TPC-B default — pgbench equivalent, 16 VUs, scale 50, 10m duration
 k6:
   benchmark:
     type: tpcb

@@ -1,3 +1,4 @@
+# TPC-C readonly — 2 replicas, read txns routed to replicas, 10m duration
 cnpg:
   replicas: 2
 

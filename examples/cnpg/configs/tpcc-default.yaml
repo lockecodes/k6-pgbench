@@ -1,3 +1,4 @@
+# TPC-C default — 10 warehouses, 20 VUs, full transaction mix, 10m duration
 k6:
   benchmark:
     type: tpcc
