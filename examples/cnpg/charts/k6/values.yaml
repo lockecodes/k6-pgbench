@@ -34,6 +34,8 @@ connection:
 prometheus:
   enabled: false
   remoteWriteUrl: ""
+  username: ""
+  password: ""
 
 resources:
   requests:

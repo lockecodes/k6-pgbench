@@ -93,6 +93,7 @@ k6_values = {
     'cluster': {'name': cnpg_config.get('name', 'k6-bench')},
     'benchmark': benchmark_config,
     'connection': k6_config.get('connection', {}),
+    'prometheus': k6_config.get('prometheus', {}),
 }
 k6_values_file = write_values_file('k6', k6_values)
 
@@ -175,7 +176,7 @@ k8s_resource(
 if monitoring_enabled:
     helm_repo('grafana', 'https://grafana.github.io/helm-charts')
 
-    monitoring_values_file = write_values_file('monitoring', monitoring_config.get('k8sMonitoring', monitoring_config))
+    monitoring_values_file = write_values_file('monitoring', monitoring_config)
 
     helm_resource(
         'grafana-k8s-monitoring',

@@ -81,6 +81,14 @@ spec:
               value: {{ .Values.prometheus.remoteWriteUrl | quote }}
             - name: K6_PROMETHEUS_RW_TREND_AS_NATIVE_HISTOGRAM
               value: "true"
+            {{- if .Values.prometheus.username }}
+            - name: K6_PROMETHEUS_RW_USERNAME
+              value: {{ .Values.prometheus.username | quote }}
+            {{- end }}
+            {{- if .Values.prometheus.password }}
+            - name: K6_PROMETHEUS_RW_PASSWORD
+              value: {{ .Values.prometheus.password | quote }}
+            {{- end }}
             {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
