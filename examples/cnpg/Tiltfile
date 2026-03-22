@@ -113,19 +113,21 @@ helm_resource(
 )
 
 # --- Phase 3: CNPG Cluster ---
-
-k8s_yaml(helm(CNPG_CHART_DIR, name='k6-bench', namespace=NAMESPACE, values=[cnpg_values_file]))
-
-k8s_resource(
-    'k6-bench',
-    resource_deps=['cnpg-operator'],
-    pod_readiness='ignore',
-)
-
-# --- Phase 4: Wait for cluster readiness ---
+# Deploy via local_resource + helm upgrade (not k8s_yaml) because the Cluster CRD
+# is registered by the operator in Phase 2 — it doesn't exist at Tiltfile load time.
 
 cluster_name = cnpg_config.get('name', 'k6-bench')
 replicas = cnpg_config.get('replicas', 0)
+
+local_resource(
+    'cnpg-cluster',
+    cmd='helm upgrade --install %s %s --namespace %s --values %s --wait --timeout 5m' % (
+        cluster_name, CNPG_CHART_DIR, NAMESPACE, cnpg_values_file,
+    ),
+    resource_deps=['cnpg-operator'],
+)
+
+# --- Phase 4: Wait for cluster readiness ---
 
 wait_cmd = 'echo "Waiting for CNPG cluster %s..." && ' % cluster_name
 wait_cmd += 'kubectl wait --for=condition=Ready cluster/%s -n %s --timeout=300s' % (cluster_name, NAMESPACE)
@@ -138,7 +140,7 @@ if replicas > 0:
 local_resource(
     'wait-for-cluster',
     cmd=wait_cmd,
-    resource_deps=['k6-bench'],
+    resource_deps=['cnpg-cluster'],
 )
 
 # --- Phase 5: Build k6-pgbench Docker image ---
