@@ -2,8 +2,8 @@
 FROM grafana/xk6:latest AS builder
 
 RUN xk6 build \
-    --with github.com/grafana/xk6-sql@v2.0.1 \
-    --with github.com/grafana/xk6-sql-driver-postgres@v1.0.1 \
+    --with github.com/grafana/xk6-sql@v1.0.6 \
+    --with github.com/grafana/xk6-sql-driver-postgres@v0.1.2 \
     --output /tmp/k6
 
 # Stage 2: Minimal runtime
