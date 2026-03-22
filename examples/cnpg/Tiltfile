@@ -10,6 +10,7 @@
 load('ext://helm_resource', 'helm_resource', 'helm_repo')
 
 watch_settings(ignore=['tmp'])
+update_settings(k8s_upsert_timeout_secs=300)
 
 # --- Configuration helpers (identical to neon-cnpg/load-test) ---
 
