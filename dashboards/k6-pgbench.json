@@ -107,7 +107,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "k6_vus{testid=~\"$testid\"}",
+          "expr": "k6_vus{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}",
           "legendFormat": "VUs",
           "refId": "A"
         }
@@ -141,7 +141,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "rate(k6_iterations_total{testid=~\"$testid\"}[$__rate_interval])",
+          "expr": "rate(k6_iterations_total{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])",
           "legendFormat": "TPS",
           "refId": "A"
         }
@@ -175,7 +175,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "k6_iterations_total{testid=~\"$testid\"}",
+          "expr": "k6_iterations_total{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}",
           "legendFormat": "iterations",
           "refId": "A"
         }
@@ -213,7 +213,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "k6_pgbench_tps_rate{testid=~\"$testid\"}",
+          "expr": "k6_pgbench_tps_rate{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}",
           "legendFormat": "success",
           "refId": "A"
         }
@@ -248,7 +248,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "rate(k6_pgbench_errors_total{testid=~\"$testid\"}[$__rate_interval])",
+          "expr": "rate(k6_pgbench_errors_total{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])",
           "legendFormat": "errors/s",
           "refId": "A"
         }
@@ -282,7 +282,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum(rate(k6_pgbench_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.5, sum(rate(k6_pgbench_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
           "legendFormat": "p50",
           "refId": "A"
         }
@@ -324,7 +324,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "rate(k6_iterations_total{testid=~\"$testid\"}[$__rate_interval])",
+          "expr": "rate(k6_iterations_total{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])",
           "legendFormat": "Total TPS",
           "refId": "A"
         }
@@ -374,17 +374,17 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "k6_pgbench_tps_rate{testid=~\"$testid\"}",
+          "expr": "k6_pgbench_tps_rate{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}",
           "legendFormat": "Success",
           "refId": "A"
         },
         {
-          "expr": "k6_pgbench_read_tps_rate{testid=~\"$testid\"}",
+          "expr": "k6_pgbench_read_tps_rate{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}",
           "legendFormat": "Read",
           "refId": "B"
         },
         {
-          "expr": "k6_pgbench_write_tps_rate{testid=~\"$testid\"}",
+          "expr": "k6_pgbench_write_tps_rate{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}",
           "legendFormat": "Write",
           "refId": "C"
         }
@@ -439,17 +439,17 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(k6_pgbench_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.50, sum(rate(k6_pgbench_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
           "legendFormat": "p95",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(k6_pgbench_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.99, sum(rate(k6_pgbench_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
           "legendFormat": "p99",
           "refId": "C"
         }
@@ -485,12 +485,12 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "rate(k6_pgbench_errors_total{testid=~\"$testid\"}[$__rate_interval])",
+          "expr": "rate(k6_pgbench_errors_total{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])",
           "legendFormat": "errors/s",
           "refId": "A"
         },
         {
-          "expr": "k6_pgbench_errors_total{testid=~\"$testid\"}",
+          "expr": "k6_pgbench_errors_total{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}",
           "legendFormat": "cumulative",
           "refId": "B"
         }
@@ -532,27 +532,27 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_tx_tpcb_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_tx_tpcb_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
           "legendFormat": "tpcb",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_tx_select_only_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_tx_select_only_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
           "legendFormat": "select_only",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_tx_simple_update_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_tx_simple_update_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
           "legendFormat": "simple_update",
           "refId": "C"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_tx_tpcb_write_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_tx_tpcb_write_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
           "legendFormat": "tpcb_write",
           "refId": "D"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_tx_tpcb_read_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_tx_tpcb_read_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
           "legendFormat": "tpcb_read",
           "refId": "E"
         }
@@ -587,27 +587,27 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_tx_new_order_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_tx_new_order_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
           "legendFormat": "new_order (45%)",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_tx_payment_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_tx_payment_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
           "legendFormat": "payment (43%)",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_tx_order_status_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_tx_order_status_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
           "legendFormat": "order_status (4%)",
           "refId": "C"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_tx_delivery_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_tx_delivery_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
           "legendFormat": "delivery (4%)",
           "refId": "D"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_tx_stock_level_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_tx_stock_level_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
           "legendFormat": "stock_level (4%)",
           "refId": "E"
         }
@@ -649,27 +649,27 @@
           "type": "timeseries",
           "targets": [
             {
-              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_update_accounts_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_update_accounts_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
               "legendFormat": "UPDATE accounts",
               "refId": "A"
             },
             {
-              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_select_abalance_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_select_abalance_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
               "legendFormat": "SELECT abalance",
               "refId": "B"
             },
             {
-              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_update_tellers_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_update_tellers_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
               "legendFormat": "UPDATE tellers",
               "refId": "C"
             },
             {
-              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_update_branches_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_update_branches_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
               "legendFormat": "UPDATE branches",
               "refId": "D"
             },
             {
-              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_insert_history_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_insert_history_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
               "legendFormat": "INSERT history",
               "refId": "E"
             }
@@ -704,37 +704,37 @@
           "type": "timeseries",
           "targets": [
             {
-              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_no_select_warehouse_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_no_select_warehouse_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
               "legendFormat": "SELECT warehouse",
               "refId": "A"
             },
             {
-              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_no_select_district_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_no_select_district_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
               "legendFormat": "SELECT district",
               "refId": "B"
             },
             {
-              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_no_update_district_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_no_update_district_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
               "legendFormat": "UPDATE district",
               "refId": "C"
             },
             {
-              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_no_select_customer_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_no_select_customer_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
               "legendFormat": "SELECT customer",
               "refId": "D"
             },
             {
-              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_no_insert_order_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_no_insert_order_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
               "legendFormat": "INSERT order",
               "refId": "E"
             },
             {
-              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_no_select_stock_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_no_select_stock_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
               "legendFormat": "SELECT stock",
               "refId": "F"
             },
             {
-              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_no_update_stock_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_no_update_stock_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
               "legendFormat": "UPDATE stock",
               "refId": "G"
             }
@@ -769,27 +769,27 @@
           "type": "timeseries",
           "targets": [
             {
-              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_pay_update_warehouse_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_pay_update_warehouse_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
               "legendFormat": "UPDATE warehouse",
               "refId": "A"
             },
             {
-              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_pay_update_district_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_pay_update_district_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
               "legendFormat": "UPDATE district",
               "refId": "B"
             },
             {
-              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_pay_select_customer_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_pay_select_customer_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
               "legendFormat": "SELECT customer",
               "refId": "C"
             },
             {
-              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_pay_update_customer_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_pay_update_customer_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
               "legendFormat": "UPDATE customer",
               "refId": "D"
             },
             {
-              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_pay_insert_history_latency_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+              "expr": "histogram_quantile(0.95, sum(rate(k6_pgbench_stmt_pay_insert_history_latency_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
               "legendFormat": "INSERT history",
               "refId": "E"
             }
@@ -833,7 +833,7 @@
           "type": "timeseries",
           "targets": [
             {
-              "expr": "k6_pgbench_replication_lag_bytes{testid=~\"$testid\"}",
+              "expr": "k6_pgbench_replication_lag_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}",
               "legendFormat": "lag bytes",
               "refId": "A"
             }
@@ -867,7 +867,7 @@
           "type": "timeseries",
           "targets": [
             {
-              "expr": "k6_pgbench_locks_waiting{testid=~\"$testid\"}",
+              "expr": "k6_pgbench_locks_waiting{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}",
               "legendFormat": "waiting locks",
               "refId": "A"
             }
@@ -901,7 +901,7 @@
           "type": "timeseries",
           "targets": [
             {
-              "expr": "k6_pgbench_connections_active{testid=~\"$testid\"}",
+              "expr": "k6_pgbench_connections_active{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}",
               "legendFormat": "active connections",
               "refId": "A"
             }
@@ -956,12 +956,12 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "k6_vus{testid=~\"$testid\"}",
+          "expr": "k6_vus{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}",
           "legendFormat": "VUs",
           "refId": "A"
         },
         {
-          "expr": "k6_vus_max{testid=~\"$testid\"}",
+          "expr": "k6_vus_max{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}",
           "legendFormat": "Max VUs",
           "refId": "B"
         }
@@ -996,7 +996,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "rate(k6_iterations_total{testid=~\"$testid\"}[$__rate_interval])",
+          "expr": "rate(k6_iterations_total{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])",
           "legendFormat": "iterations/s",
           "refId": "A"
         }
@@ -1031,12 +1031,12 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(k6_iteration_duration_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.50, sum(rate(k6_iteration_duration_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(k6_iteration_duration_seconds{testid=~\"$testid\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum(rate(k6_iteration_duration_seconds{cluster=~\"$cluster\", namespace=~\"$namespace\", testid=~\"$testid\"}[$__rate_interval])))",
           "legendFormat": "p95",
           "refId": "B"
         }
@@ -1063,6 +1063,46 @@
       },
       {
         "current": { "selected": true, "text": ".*", "value": ".*" },
+        "description": "Filter by Kubernetes cluster name",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Cluster",
+        "multi": true,
+        "name": "cluster",
+        "options": [],
+        "query": {
+          "query": "label_values(k6_vus, cluster)",
+          "refId": "cluster"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      },
+      {
+        "current": { "selected": true, "text": ".*", "value": ".*" },
+        "description": "Filter by Kubernetes namespace",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Namespace",
+        "multi": true,
+        "name": "namespace",
+        "options": [],
+        "query": {
+          "query": "label_values(k6_vus{cluster=~\"$cluster\"}, namespace)",
+          "refId": "namespace"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      },
+      {
+        "current": { "selected": true, "text": ".*", "value": ".*" },
         "description": "Filter by k6 test run ID",
         "hide": 0,
         "includeAll": true,
@@ -1071,7 +1111,7 @@
         "name": "testid",
         "options": [],
         "query": {
-          "query": "label_values(k6_vus, testid)",
+          "query": "label_values(k6_vus{cluster=~\"$cluster\", namespace=~\"$namespace\"}, testid)",
           "refId": "testid"
         },
         "refresh": 2,
