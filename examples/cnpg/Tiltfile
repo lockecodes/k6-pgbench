@@ -9,6 +9,8 @@
 
 load('ext://helm_resource', 'helm_resource', 'helm_repo')
 
+watch_settings(ignore=['tmp'])
+
 # --- Configuration helpers (identical to neon-cnpg/load-test) ---
 
 def deep_merge(base, override):
