@@ -1,15 +1,15 @@
 // TPC-C Payment transaction (43% of mix).
 // Write-only: updates warehouse/district YTD, customer balance, inserts history.
 //
-// TPC-C compliance notes:
-// - Customer lookup by last name uses simplified approach (clause 2.5.2.2)
-// - 60% by last name, 40% by ID
+// When config.tpcc.nurand is true, uses NURand for customer ID (A=1023)
+// and last name number (A=255) per TPC-C clause 2.5.1.2.
+// 60% by last name, 40% by ID (clause 2.5.2.2).
 
 import { recordStmt } from '../lib/metrics.js';
 
 const SYLLABLES = ['BAR', 'OUGHT', 'ABLE', 'PRI', 'PRES', 'ESE', 'ANTI', 'CALLY', 'ATION', 'EING'];
 
-export function payment(db, metrics, config) {
+export function payment(db, metrics, config, rng) {
   const w = config.warehouses;
   const wId = randomInt(1, w);
   const dId = randomInt(1, 10);
@@ -38,8 +38,8 @@ export function payment(db, metrics, config) {
   // Customer lookup: 60% by last name, 40% by ID
   let cId;
   if (Math.random() < 0.6) {
-    // By last name — find customer at midpoint of matching set
-    const num = randomInt(0, 999);
+    // By last name — NURand(255, 0, 999) for last name number
+    const num = rng.lastName();
     const lastName = customerLastName(num);
     t0 = Date.now();
     const cRows = db.query(
@@ -54,7 +54,8 @@ export function payment(db, metrics, config) {
     // Select the midpoint row per TPC-C spec
     cId = parseInt(cRows[Math.floor(cRows.length / 2)].c_id, 10);
   } else {
-    cId = randomInt(1, 3000);
+    // By customer ID — NURand(1023, 1, 3000)
+    cId = rng.customerId();
   }
 
   // Get customer data

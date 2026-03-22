@@ -5,11 +5,10 @@
 //
 // Scale factor = number of warehouses.
 // Data generation follows TPC-C spec for row counts.
-// Uses uniform random where NURand is specified — commented for future compliance.
-
 import sql from 'k6/x/sql';
 import driver from 'k6/x/sql/driver/postgres';
 import { getConfig, buildConnectionString } from '../lib/config.js';
+import { createRandom } from '../lib/nurand.js';
 
 const BATCH_SIZE = 500;
 
@@ -25,14 +24,16 @@ export default function () {
   const db = sql.open(driver, buildConnectionString(config.connection.primary));
   const warehouses = config.warehouses;
 
+  const rng = createRandom(config.tpcc.nurand);
+
   try {
-    initSchema(db, warehouses);
+    initSchema(db, warehouses, rng);
   } finally {
     db.close();
   }
 }
 
-function initSchema(db, warehouses) {
+function initSchema(db, warehouses, rng) {
   console.log(`Initializing TPC-C schema with ${warehouses} warehouse(s)`);
 
   dropTables(db);
@@ -43,7 +44,7 @@ function initSchema(db, warehouses) {
     console.log(`Populating warehouse ${w}/${warehouses}`);
     populateWarehouse(db, w);
     populateDistricts(db, w);
-    populateCustomers(db, w);
+    populateCustomers(db, w, rng);
     populateOrders(db, w);
     populateStock(db, w);
   }
@@ -230,10 +231,10 @@ function populateDistricts(db, wId) {
   }
 }
 
-function populateCustomers(db, wId) {
+function populateCustomers(db, wId, rng) {
   // 3,000 customers per district, 10 districts = 30,000 per warehouse
-  // TPC-C spec: customer last names use syllable list for first 1000, random after
-  // Simplified: using random strings — commented for future NURand compliance
+  // TPC-C spec (clause 4.3.3.1): c_id 1-1000 use deterministic syllable mapping,
+  // c_id 1001-3000 use NURand(255, 0, 999) with C_LOAD for last name number.
   for (let d = 1; d <= 10; d++) {
     for (let i = 0; i < 3000; i += BATCH_SIZE) {
       const batchEnd = Math.min(i + BATCH_SIZE, 3000);
@@ -241,7 +242,7 @@ function populateCustomers(db, wId) {
       const histValues = [];
       for (let j = i; j < batchEnd; j++) {
         const cId = j + 1;
-        const last = customerLastName(cId <= 1000 ? cId - 1 : randomInt(0, 999));
+        const last = customerLastName(cId <= 1000 ? cId - 1 : rng.lastNameLoad());
         const credit = Math.random() < 0.1 ? 'BC' : 'GC';
         const discount = (randomInt(0, 5000) / 10000).toFixed(4);
         custValues.push(

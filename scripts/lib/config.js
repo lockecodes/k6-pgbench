@@ -30,6 +30,11 @@ export function getConfig() {
 
     // TPC-C specific
     warehouses: parseInt(__ENV.K6_TPCC_WAREHOUSES || String(scale), 10),
+    tpcc: {
+      nurand: (__ENV.K6_TPCC_NURAND || 'true') === 'true',
+      deferredDelivery: (__ENV.K6_TPCC_DEFERRED_DELIVERY || 'false') === 'true',
+      thinkTime: (__ENV.K6_TPCC_THINK_TIME || 'false') === 'true',
+    },
 
     // pg_stat sampler interval (comprehensive tier)
     pgstatInterval: parseInt(__ENV.K6_PGSTAT_INTERVAL || '10', 10),

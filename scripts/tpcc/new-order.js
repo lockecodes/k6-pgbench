@@ -1,13 +1,12 @@
 // TPC-C New-Order transaction (45% of mix).
 // Write-only: inserts order, new_order, and order_line rows; updates stock.
 //
-// TPC-C compliance notes:
-// - Uses uniform random for item selection where NURand(A=8191, 1, 100000) is specified (clause 2.4.1.5)
-// - Think time and keying time omitted (add via config flags for full compliance)
+// When config.tpcc.nurand is true, uses NURand for customer ID (A=1023)
+// and item ID (A=8191) selection per TPC-C clause 2.4.1.5.
 
 import { recordStmt } from '../lib/metrics.js';
 
-export function newOrder(db, metrics, config) {
+export function newOrder(db, metrics, config, rng) {
   const w = config.warehouses;
   const wId = randomInt(1, w);
   const dId = randomInt(1, 10);
@@ -31,8 +30,8 @@ export function newOrder(db, metrics, config) {
   db.exec(`UPDATE district SET d_next_o_id = ${nextOId + 1} WHERE d_w_id = ${wId} AND d_id = ${dId}`);
   recordStmt(metrics, 'no_update_district', Date.now() - t0);
 
-  // Get customer discount and last name
-  const cId = randomInt(1, 3000); // Simplified: uniform random instead of NURand
+  // Get customer discount and last name — NURand(1023, 1, 3000)
+  const cId = rng.customerId();
   t0 = Date.now();
   db.query(`SELECT c_discount, c_last, c_credit FROM customer WHERE c_w_id = ${wId} AND c_d_id = ${dId} AND c_id = ${cId}`);
   recordStmt(metrics, 'no_select_customer', Date.now() - t0);
@@ -48,9 +47,14 @@ export function newOrder(db, metrics, config) {
   db.exec(`INSERT INTO new_order (no_o_id, no_d_id, no_w_id) VALUES (${nextOId}, ${dId}, ${wId})`);
   recordStmt(metrics, 'no_insert_new_order', Date.now() - t0);
 
-  // Process order lines
+  // Process order lines — 1% rollback via invalid item (clause 2.4.1.5 item 6)
   for (let ol = 1; ol <= olCnt; ol++) {
-    const olIId = randomInt(1, 100000);
+    let olIId;
+    if (ol === olCnt && Math.random() < 0.01) {
+      olIId = 999999; // Invalid item triggers rollback
+    } else {
+      olIId = rng.itemId(); // NURand(8191, 1, 100000)
+    }
     const olQty = randomInt(1, 10);
 
     // Get item price

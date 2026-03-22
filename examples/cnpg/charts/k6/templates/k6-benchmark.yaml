@@ -66,6 +66,14 @@ spec:
             - name: K6_TPCC_WAREHOUSES
               value: {{ .Values.benchmark.warehouses | quote }}
             {{- end }}
+            # TPC-C compliance options
+            - name: K6_TPCC_NURAND
+              value: {{ .Values.benchmark.tpcc.nurand | quote }}
+            - name: K6_TPCC_DEFERRED_DELIVERY
+              value: {{ .Values.benchmark.tpcc.deferredDelivery | quote }}
+            - name: K6_TPCC_THINK_TIME
+              value: {{ .Values.benchmark.tpcc.thinkTime | quote }}
+
             {{- if .Values.benchmark.writeVus }}
             - name: K6_WRITE_VUS
               value: {{ .Values.benchmark.writeVus | quote }}

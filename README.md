@@ -5,7 +5,7 @@
 ## Features
 
 - **Exact pgbench TPC-B** — faithful reproduction of pgbench's schema, data generation, and transaction logic (standard, select-only, simple-update modes)
-- **Production-quality TPC-C** — 9-table schema with all 5 transaction types in the correct 45/43/4/4/4 weighted mix (see [TPC-C simplifications](#tpc-c-simplifications) for deviations from strict compliance)
+- **Spec-compliant TPC-C** — 9-table schema with all 5 transaction types in the correct 45/43/4/4/4 weighted mix, NURand distribution, deferred delivery, and think time (all [configurable](#tpc-c-compliance-options))
 - **Read replica routing** — separate connection strings for primary and readonly endpoints, with `separate` and `pooler` connection modes
 - **Configurable metrics** — three tiers (minimal, standard, comprehensive) controlling how much telemetry is emitted
 - **Prometheus remote write** — push metrics directly to Grafana Cloud or any Prometheus-compatible endpoint
@@ -106,6 +106,9 @@ docker build -t k6-pgbench .
 | `K6_METRICS_LEVEL` | `standard` | Metrics tier: `minimal`, `standard`, or `comprehensive` |
 | `K6_TPCC_WAREHOUSES` | same as scale | Number of TPC-C warehouses |
 | `K6_PGSTAT_INTERVAL` | `10` | Seconds between pg_stat samples (comprehensive tier) |
+| `K6_TPCC_NURAND` | `true` | Use NURand distribution for TPC-C customer/item selection |
+| `K6_TPCC_DEFERRED_DELIVERY` | `false` | Run delivery in a separate VU group |
+| `K6_TPCC_THINK_TIME` | `false` | Apply terminal keying + think time delays |
 
 ### Prometheus
 
@@ -430,15 +433,29 @@ The kubernetes-monitoring chart creates secrets from the `destinations` and `rem
 **No data in Grafana dashboard**
 Verify k6 is running with `--out experimental-prometheus-rw` by checking the benchmark pod logs. Confirm `k6.prometheus.enabled: true` and that `remoteWriteUrl`, `username`, and `password` are set in your override file.
 
-## TPC-C Simplifications
+## TPC-C Compliance Options
 
-The TPC-C implementation preserves full transaction semantics and is suitable for realistic database benchmarking, but deviates from strict TPC-C compliance in three documented areas:
+All TPC-C specification requirements are implemented and individually configurable:
 
-| Area | Spec Requirement | Current Implementation |
-|------|-----------------|----------------------|
-| **Customer/item selection** | NURand distribution (non-uniform random with hotspot bias) | Uniform random. Affects data access patterns — uniform spreads load evenly rather than concentrating on hot rows. |
-| **Delivery execution** | Deferred/background transaction (clause 2.7.4) | Runs inline as a single transaction. Does not affect SQL logic, only execution model. |
-| **Think time / keying time** | Terminal emulation delays between transactions | Omitted. Standard practice for automated load testing harnesses. |
+| Option | Config Key | Default | Description |
+|--------|-----------|---------|-------------|
+| **NURand distribution** | `tpcc.nurand` | `true` | Uses NURand(A, x, y) for customer ID (A=1023), item ID (A=8191), and customer last name (A=255) selection, with proper C_LOAD/C_RUN constraints. When disabled, falls back to uniform random. |
+| **Deferred delivery** | `tpcc.deferredDelivery` | `false` | Runs delivery transactions in a separate k6 VU group (clause 2.7.4) rather than inline in the terminal mix. Delivery gets `ceil(vus * 0.04)` dedicated VUs. |
+| **Think time** | `tpcc.thinkTime` | `false` | Applies spec-defined keying time before each transaction and negative-exponential think time after (clause 5.2.5). Keying: 18s New-Order, 3s Payment, 2s others. Think: 12s New-Order/Payment, 10s Order-Status, 5s Delivery/Stock-Level. |
+
+Configure via `.values.override.yaml`:
+
+```yaml
+k6:
+  benchmark:
+    type: tpcc
+    tpcc:
+      nurand: true             # On by default
+      deferredDelivery: true    # Enable for full compliance
+      thinkTime: true           # Enable for full compliance
+```
+
+Or via environment variables: `K6_TPCC_NURAND`, `K6_TPCC_DEFERRED_DELIVERY`, `K6_TPCC_THINK_TIME` (all `true`/`false`).
 
 The pgbench (TPC-B) implementation is an exact match to native `pgbench` — schema, data generation, random distributions, and all transaction variants.
 

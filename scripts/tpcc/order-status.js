@@ -2,14 +2,15 @@
 // Read-only: looks up customer, finds most recent order, retrieves order lines.
 // Can be routed to readonly connection in replica mode.
 //
-// TPC-C compliance notes:
-// - 60% by last name, 40% by ID (clause 2.6.2.2)
+// When config.tpcc.nurand is true, uses NURand for customer ID (A=1023)
+// and last name number (A=255) per TPC-C clause 2.6.1.2.
+// 60% by last name, 40% by ID (clause 2.6.2.2).
 
 import { recordStmt } from '../lib/metrics.js';
 
 const SYLLABLES = ['BAR', 'OUGHT', 'ABLE', 'PRI', 'PRES', 'ESE', 'ANTI', 'CALLY', 'ATION', 'EING'];
 
-export function orderStatus(db, metrics, config) {
+export function orderStatus(db, metrics, config, rng) {
   const w = config.warehouses;
   const wId = randomInt(1, w);
   const dId = randomInt(1, 10);
@@ -19,7 +20,8 @@ export function orderStatus(db, metrics, config) {
   let t0;
 
   if (Math.random() < 0.6) {
-    const num = randomInt(0, 999);
+    // By last name — NURand(255, 0, 999) for last name number
+    const num = rng.lastName();
     const lastName = customerLastName(num);
     t0 = Date.now();
     const cRows = db.query(
@@ -32,7 +34,8 @@ export function orderStatus(db, metrics, config) {
     if (cRows.length === 0) return false;
     cId = parseInt(cRows[Math.floor(cRows.length / 2)].c_id, 10);
   } else {
-    cId = randomInt(1, 3000);
+    // By customer ID — NURand(1023, 1, 3000)
+    cId = rng.customerId();
     t0 = Date.now();
     db.query(
       `SELECT c_balance, c_first, c_middle, c_last

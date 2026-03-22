@@ -19,6 +19,10 @@ benchmark:
 
   # TPC-C specific
   warehouses: ""  # defaults to scale if empty
+  tpcc:
+    nurand: true           # NURand distribution (spec-compliant)
+    deferredDelivery: false # Deferred delivery execution
+    thinkTime: false        # Terminal emulation delays
 
   # Read/write VU split for tpcb-readonly
   writeVus: ""
